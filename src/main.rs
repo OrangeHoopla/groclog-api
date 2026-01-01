@@ -3,9 +3,12 @@ mod model;
 mod response;
 mod route;
 
-use axum::http::{
-    header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
-    HeaderValue, Method,
+use axum::{
+    extract::DefaultBodyLimit,
+    http::{
+        HeaderValue, Method,
+        header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
+    },
 };
 use route::create_router;
 use tower_http::cors::CorsLayer;
@@ -18,7 +21,9 @@ async fn main() {
         .allow_credentials(true)
         .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
-    let app = create_router().layer(cors);
+    let app = create_router()
+        .layer(CorsLayer::permissive())
+        .layer(DefaultBodyLimit::max(1000000000));
 
     println!("🚀 Server started successfully");
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();

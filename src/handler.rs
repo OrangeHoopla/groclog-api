@@ -1,13 +1,17 @@
+use std::fs;
+
 use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::IntoResponse,
     Json,
+    extract::{Multipart, Path, State},
+    http::{HeaderMap, StatusCode},
+    response::IntoResponse,
 };
+use grocery_to_json::{aldi::Aldi, imageproc::ImageProc, reciept::Reciept, tesseract::Tesseract};
+use image::ImageReader;
 use uuid::Uuid;
 
 use crate::{
-    model::{Todo, UpdateTodoSchema, DB},
+    model::{DB, Todo, UpdateTodoSchema},
     response::{SingleTodoResponse, TodoData, TodoListResponse},
 };
 
@@ -22,12 +26,7 @@ pub async fn health_checker_handler() -> impl IntoResponse {
     Json(json_response)
 }
 
-pub async fn todos_list_handler(
-) -> impl IntoResponse {
-
-
-
-
+pub async fn todos_list_handler() -> impl IntoResponse {
     let json_response = TodoListResponse {
         status: "success".to_string(),
         results: 0,
@@ -163,4 +162,32 @@ pub async fn delete_todo_handler(
     });
 
     Err((StatusCode::NOT_FOUND, Json(error_response)))
+}
+
+/*
+Takes Uploaded file and stores it locally
+returning the id it was saved as to be called upon later
+ */
+pub async fn upload(_headers: HeaderMap, mut multipart: Multipart) -> impl IntoResponse {
+    let id = Uuid::new_v4();
+
+    while let Some(field) = multipart.next_field().await.unwrap() {
+        let _name = field.name().unwrap().to_string();
+        let data = field.bytes().await.unwrap();
+        fs::write(format!("images/{}", id), data).expect("Error writing Image to File");
+    }
+
+    let res = process_image(format!("images/{}", id));
+
+    Json(res)
+}
+
+fn process_image(location: String) -> Aldi {
+    let mut test: Reciept = ImageReader::open(location).unwrap().try_into().unwrap();
+    test.crop_gray();
+    test.otsu(1);
+    test.apply();
+    let wow: Aldi = test.try_into().unwrap();
+
+    wow
 }
