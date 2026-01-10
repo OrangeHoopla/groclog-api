@@ -6,7 +6,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
 };
-use grocery_to_json::{aldi::Aldi, imageproc::ImageProc, reciept::Reciept, tesseract::Tesseract};
+use grocery_to_json::{grocery_list::GroceryList, imageproc::ImageProc, reciept::Reciept, tesseract::Tesseract};
 use image::ImageReader;
 use uuid::Uuid;
 
@@ -182,12 +182,12 @@ pub async fn upload(_headers: HeaderMap, mut multipart: Multipart) -> impl IntoR
     Json(res)
 }
 
-fn process_image(location: String) -> Aldi {
+fn process_image(location: String) -> GroceryList {
     let mut test: Reciept = ImageReader::open(location).unwrap().try_into().unwrap();
     test.crop_gray();
     test.otsu(1);
     test.apply();
-    let wow: Aldi = test.try_into().unwrap();
+    let wow: GroceryList = test.try_into().unwrap();
 
     wow
 }
